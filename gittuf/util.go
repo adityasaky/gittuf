@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/adityasaky/gittuf/internal/gitstore"
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/secure-systems-lab/go-securesystemslib/cjson"
 
@@ -18,7 +18,7 @@ import (
 
 var METADATADIR = "../metadata" // FIXME: embed metadata in Git repo
 
-func loadRoot(state *gitstore.State) (*tufdata.Root, error) {
+func loadRoot(state *metadata.PolicyState) (*tufdata.Root, error) {
 	var role tufdata.Root
 
 	roleBytes, err := state.GetCurrentMetadataBytes("root")
@@ -70,7 +70,7 @@ func loadRoot(state *gitstore.State) (*tufdata.Root, error) {
 	return &role, err
 }
 
-func loadTargets(state *gitstore.State, roleName string, db *tufverify.DB) (*tufdata.Targets, error) {
+func loadTargets(state *metadata.PolicyState, roleName string, db *tufverify.DB) (*tufdata.Targets, error) {
 	var role tufdata.Targets
 
 	roleBytes, err := state.GetCurrentMetadataBytes(roleName)
@@ -93,7 +93,7 @@ func loadTargets(state *gitstore.State, roleName string, db *tufverify.DB) (*tuf
 	return &role, err
 }
 
-func getTreeObjectForTargetState(state *gitstore.State, targets *tufdata.Targets, targetName string) (*object.Tree, error) {
+func getTreeObjectForTargetState(state *metadata.PolicyState, targets *tufdata.Targets, targetName string) (*object.Tree, error) {
 	lastTrustedCommit, err := state.GetCommitObjectFromHash(
 		convertTUFHashHexBytesToPlumbingHash(
 			targets.Targets[targetName].Hashes["sha1"],

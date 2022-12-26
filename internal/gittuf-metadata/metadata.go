@@ -1,4 +1,4 @@
-package gitstore
+package metadata
 
 import (
 	"encoding/json"
@@ -16,13 +16,13 @@ const LastTrustedRef = "refs/gittuf/last-trusted"
 
 func InitNamespace(repoRoot string) error {
 	// FIXME: this does not handle detached gitdir?
-	_, err := os.Stat(filepath.Join(repoRoot, ".git", StateRef))
+	_, err := os.Stat(filepath.Join(repoRoot, ".git", PolicyStateRef))
 	if os.IsNotExist(err) {
 		err := os.Mkdir(filepath.Join(repoRoot, ".git", "refs", "gittuf"), 0755)
 		if err != nil {
 			return err
 		}
-		err = os.WriteFile(filepath.Join(repoRoot, ".git", StateRef), plumbing.ZeroHash[:], 0644)
+		err = os.WriteFile(filepath.Join(repoRoot, ".git", PolicyStateRef), plumbing.ZeroHash[:], 0644)
 		if err != nil {
 			return err
 		}
@@ -34,50 +34,50 @@ func InitNamespace(repoRoot string) error {
 	return nil
 }
 
-type GitStore struct {
+type GitTUFMetadata struct {
 	repository  *git.Repository
-	state       *State
+	policyState *PolicyState
 	lastTrusted plumbing.Hash
 }
 
-func InitGitStore(repoRoot string, rootPublicKeys []tufdata.PublicKey, metadata map[string][]byte) (*GitStore, error) {
+func InitMetadata(repoRoot string, rootPublicKeys []tufdata.PublicKey, metadata map[string][]byte) (*GitTUFMetadata, error) {
 	err := InitNamespace(repoRoot)
 	if err != nil {
-		return &GitStore{}, err
+		return &GitTUFMetadata{}, err
 	}
 
 	repo, err := git.PlainOpen(repoRoot)
 	if err != nil {
-		return &GitStore{}, err
+		return &GitTUFMetadata{}, err
 	}
 
-	state, err := initState(repo, rootPublicKeys, metadata)
+	state, err := initPolicyState(repo, rootPublicKeys, metadata)
 	if err != nil {
-		return &GitStore{}, err
+		return &GitTUFMetadata{}, err
 	}
 
-	return &GitStore{
+	return &GitTUFMetadata{
 		repository:  repo,
-		state:       state,
+		policyState: state,
 		lastTrusted: plumbing.ZeroHash,
 	}, nil
 }
 
-func LoadGitStore(repoRoot string) (*GitStore, error) {
+func LoadGitTUFMetadataHandler(repoRoot string) (*GitTUFMetadata, error) {
 	repo, err := git.PlainOpen(repoRoot)
 	if err != nil {
-		return &GitStore{}, err
+		return &GitTUFMetadata{}, err
 	}
 
-	stateRef, err := repo.Reference(plumbing.ReferenceName(StateRef), true)
+	stateRef, err := repo.Reference(plumbing.ReferenceName(PolicyStateRef), true)
 	if err != nil {
-		return &GitStore{}, err
+		return &GitTUFMetadata{}, err
 	}
 
 	if stateRef.Hash().IsZero() {
-		return &GitStore{
+		return &GitTUFMetadata{
 			repository: repo,
-			state: &State{
+			policyState: &PolicyState{
 				metadataStaging:     map[string][]byte{},
 				keysStaging:         map[string][]byte{},
 				repository:          repo,
@@ -93,22 +93,22 @@ func LoadGitStore(repoRoot string) (*GitStore, error) {
 
 	state, err := loadState(repo, stateRef.Hash())
 	if err != nil {
-		return &GitStore{}, err
+		return &GitTUFMetadata{}, err
 	}
 
 	lastTrustedRef, err := repo.Reference(plumbing.ReferenceName(LastTrustedRef), true)
 	if err != nil {
-		return &GitStore{}, err
+		return &GitTUFMetadata{}, err
 	}
 
-	return &GitStore{
+	return &GitTUFMetadata{
 		repository:  repo,
-		state:       state,
+		policyState: state,
 		lastTrusted: lastTrustedRef.Hash(),
 	}, nil
 }
 
-func (g *GitStore) GetLastTrusted() (map[string]string, error) {
+func (g *GitTUFMetadata) GetLastTrusted() (map[string]string, error) {
 	if g.lastTrusted.IsZero() {
 		return map[string]string{}, nil
 	}
@@ -122,7 +122,7 @@ func (g *GitStore) GetLastTrusted() (map[string]string, error) {
 	return lastTrusted, err
 }
 
-func (g *GitStore) WriteLastTrusted(lastTrusted map[string]string) error {
+func (g *GitTUFMetadata) WriteLastTrusted(lastTrusted map[string]string) error {
 	contents, err := json.Marshal(lastTrusted)
 	if err != nil {
 		return err
@@ -143,21 +143,21 @@ func (g *GitStore) WriteLastTrusted(lastTrusted map[string]string) error {
 }
 
 // State returns the current state.
-func (g *GitStore) State() *State {
-	return g.state
+func (g *GitTUFMetadata) State() *PolicyState {
+	return g.policyState
 }
 
-func (g *GitStore) Repository() *git.Repository {
+func (g *GitTUFMetadata) Repository() *git.Repository {
 	return g.repository
 }
 
 // SpecificState returns the specified state.
-func (g *GitStore) SpecificState(stateID string) (*State, error) {
+func (g *GitTUFMetadata) SpecificState(stateID string) (*PolicyState, error) {
 	stateHash := plumbing.NewHash(stateID)
 	return loadState(g.repository, stateHash)
 }
 
-func (g *GitStore) LastTrusted(target string) (string, error) {
+func (g *GitTUFMetadata) LastTrusted(target string) (string, error) {
 	lastTrusted, err := g.GetLastTrusted()
 	if err != nil {
 		return "", err
@@ -169,7 +169,7 @@ func (g *GitStore) LastTrusted(target string) (string, error) {
 	return stateID, nil
 }
 
-func (g *GitStore) UpdateTrustedState(target, stateID string) error {
+func (g *GitTUFMetadata) UpdateTrustedState(target, stateID string) error {
 	lastTrusted, err := g.GetLastTrusted()
 	if err != nil {
 		return err
@@ -177,4 +177,10 @@ func (g *GitStore) UpdateTrustedState(target, stateID string) error {
 	lastTrusted[target] = stateID
 
 	return g.WriteLastTrusted(lastTrusted)
+}
+
+func (g *GitTUFMetadata) ReferenceState(refName string) (*ReferenceState, error) {
+	trustedKeys := []tufdata.PublicKey{}
+	// FIXME: how do we associate reference states at the corresponding policy states? Is it safe to infer trustedKeys?
+	return LoadReferenceStateForRef(g.repository, refName, trustedKeys)
 }

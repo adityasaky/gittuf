@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/adityasaky/gittuf/gittuf"
-	"github.com/adityasaky/gittuf/internal/gitstore"
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	tufdata "github.com/theupdateframework/go-tuf/data"
 )
 
@@ -27,10 +27,10 @@ func parseExpires(e string, role string) (time.Time, error) {
 	return time.Now().AddDate(0, 0, days).UTC(), nil
 }
 
-func getGitStore() (*gitstore.GitStore, error) {
+func getGitTUFMetadataHandler() (*metadata.GitTUFMetadata, error) {
 	dir, err := gittuf.GetRepoRootDir()
 	if err != nil {
-		return &gitstore.GitStore{}, err
+		return &metadata.GitTUFMetadata{}, err
 	}
-	return gitstore.LoadGitStore(dir)
+	return metadata.LoadGitTUFMetadataHandler(dir)
 }

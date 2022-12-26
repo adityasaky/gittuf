@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/adityasaky/gittuf/gittuf"
-	"github.com/adityasaky/gittuf/internal/gitstore"
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	"github.com/spf13/cobra"
 )
 
@@ -71,16 +71,16 @@ func runMetadataInit(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	return gitstore.InitNamespace(dir)
+	return metadata.InitNamespace(dir)
 }
 
 func runMetadataLs(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}
 
-	currentTree, err := store.State().GetTreeForNamespace(gitstore.MetadataDir)
+	currentTree, err := store.State().GetTreeForNamespace(metadata.MetadataDir)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func runMetadataLs(cmd *cobra.Command, args []string) error {
 }
 
 func runMetadataAdd(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func runMetadataAdd(cmd *cobra.Command, args []string) error {
 }
 
 func runMetadataCat(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func runMetadataCat(cmd *cobra.Command, args []string) error {
 }
 
 func runMetadataRm(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/adityasaky/gittuf/internal/gitstore"
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	"github.com/spf13/cobra"
 	tufdata "github.com/theupdateframework/go-tuf/data"
 )
@@ -61,12 +61,12 @@ func init() {
 }
 
 func runKeysLs(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}
 
-	currentTree, err := store.State().GetTreeForNamespace(gitstore.KeysDir)
+	currentTree, err := store.State().GetTreeForNamespace(metadata.KeysDir)
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func runKeysLs(cmd *cobra.Command, args []string) error {
 }
 
 func runKeysAdd(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func runKeysAdd(cmd *cobra.Command, args []string) error {
 }
 
 func runKeysCat(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func runKeysCat(cmd *cobra.Command, args []string) error {
 }
 
 func runKeysRm(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}

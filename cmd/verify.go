@@ -33,7 +33,7 @@ func init() {
 }
 
 func runVerifyState(cmd *cobra.Command, args []string) {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		fmt.Println("Error:", err)
 	}

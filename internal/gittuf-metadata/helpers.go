@@ -1,4 +1,4 @@
-package gitstore
+package metadata
 
 import (
 	"fmt"
@@ -24,11 +24,11 @@ func getNameWithoutExtension(fileName string) string {
 }
 
 /*
-initState is invoked during the init workflow. A set of TUF metadata is
+initPolicyState is invoked during the init workflow. A set of TUF metadata is
 created and passed in. This is then written to the store.
 */
-func initState(repo *git.Repository, rootPublicKeys []tufdata.PublicKey, metadata map[string][]byte) (*State, error) {
-	r := &State{
+func initPolicyState(repo *git.Repository, rootPublicKeys []tufdata.PublicKey, metadata map[string][]byte) (*PolicyState, error) {
+	r := &PolicyState{
 		metadataStaging:     map[string][]byte{},
 		keysStaging:         map[string][]byte{},
 		tip:                 plumbing.ZeroHash,
@@ -41,7 +41,7 @@ func initState(repo *git.Repository, rootPublicKeys []tufdata.PublicKey, metadat
 
 	err := r.StageKeys(rootPublicKeys)
 	if err != nil {
-		return &State{}, err
+		return &PolicyState{}, err
 	}
 
 	r.StageMultipleMetadata(metadata)
@@ -49,15 +49,15 @@ func initState(repo *git.Repository, rootPublicKeys []tufdata.PublicKey, metadat
 	return r, nil
 }
 
-func loadState(repo *git.Repository, commitID plumbing.Hash) (*State, error) {
+func loadState(repo *git.Repository, commitID plumbing.Hash) (*PolicyState, error) {
 	commitObj, err := repo.CommitObject(commitID)
 	if err != nil {
-		return &State{}, err
+		return &PolicyState{}, err
 	}
 
 	tree, err := repo.TreeObject(commitObj.TreeHash)
 	if err != nil {
-		return &State{}, err
+		return &PolicyState{}, err
 	}
 
 	var metadataTree *object.Tree
@@ -67,12 +67,12 @@ func loadState(repo *git.Repository, commitID plumbing.Hash) (*State, error) {
 		if entry.Name == MetadataDir {
 			metadataTree, err = repo.TreeObject(entry.Hash)
 			if err != nil {
-				return &State{}, err
+				return &PolicyState{}, err
 			}
 		} else if entry.Name == KeysDir {
 			keysTree, err = repo.TreeObject(entry.Hash)
 			if err != nil {
-				return &State{}, err
+				return &PolicyState{}, err
 			}
 		}
 	}
@@ -87,7 +87,7 @@ func loadState(repo *git.Repository, commitID plumbing.Hash) (*State, error) {
 		rootKeys[getNameWithoutExtension(entry.Name)] = entry
 	}
 
-	return &State{
+	return &PolicyState{
 		metadataStaging:     map[string][]byte{},
 		keysStaging:         map[string][]byte{},
 		repository:          repo,

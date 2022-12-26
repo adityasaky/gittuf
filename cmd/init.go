@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/adityasaky/gittuf/gittuf"
-	"github.com/adityasaky/gittuf/internal/gitstore"
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	"github.com/spf13/cobra"
 	tufdata "github.com/theupdateframework/go-tuf/data"
 )
@@ -138,18 +138,18 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	metadata := map[string][]byte{}
+	metadataContents := map[string][]byte{}
 
 	for k, v := range roles {
 		roleBytes, err := json.Marshal(v)
 		if err != nil {
 			return err
 		}
-		metadata[k] = roleBytes
+		metadataContents[k] = roleBytes
 	}
 
 	// TODO: Should we undo git init if this call fails?
-	store, err := gitstore.InitGitStore(".", rootPublicKeys, metadata)
+	store, err := metadata.InitMetadata(".", rootPublicKeys, metadataContents)
 	if err != nil {
 		return err
 	}

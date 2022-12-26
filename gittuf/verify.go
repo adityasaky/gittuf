@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/adityasaky/gittuf/internal/gitstore"
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	tufdata "github.com/theupdateframework/go-tuf/data"
@@ -36,7 +36,7 @@ func VerifyTrustedStates(target string, stateA string, stateB string) error {
 		return err
 	}
 
-	stateARepo, err := gitstore.LoadAtState(repoRoot, stateA)
+	stateARepo, err := metadata.LoadAtState(repoRoot, stateA)
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func VerifyTrustedStates(target string, stateA string, stateB string) error {
 		return err
 	}
 
-	stateBRepo, err := gitstore.LoadAtState(repoRoot, stateB)
+	stateBRepo, err := metadata.LoadAtState(repoRoot, stateB)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func VerifyTrustedStates(target string, stateA string, stateB string) error {
 /*
 VerifyState checks that a target has the hash specified in the TUF delegations tree.
 */
-func VerifyState(store *gitstore.GitStore, target string) error {
+func VerifyState(store *metadata.GitTUFMetadata, target string) error {
 	state := store.State()
 	activeID, err := getCurrentCommitID(target)
 	if err != nil {
@@ -123,7 +123,7 @@ func VerifyState(store *gitstore.GitStore, target string) error {
 	return nil
 }
 
-func InitializeTopLevelDB(state *gitstore.State) (*tufverify.DB, error) {
+func InitializeTopLevelDB(state *metadata.PolicyState) (*tufverify.DB, error) {
 	db := tufverify.NewDB()
 
 	rootRole, err := loadRoot(state)
@@ -146,7 +146,7 @@ func InitializeTopLevelDB(state *gitstore.State) (*tufverify.DB, error) {
 	return db, nil
 }
 
-func InitializeDBUntilRole(state *gitstore.State, roleName string) (*tufverify.DB, error) {
+func InitializeDBUntilRole(state *metadata.PolicyState, roleName string) (*tufverify.DB, error) {
 	db, err := InitializeTopLevelDB(state)
 	if err != nil {
 		return db, err
@@ -215,7 +215,7 @@ func getCurrentCommitID(target string) (tufdata.HexBytes, error) {
 	return GetTipCommitIDForRef(refName, refType)
 }
 
-func getTargetsRoleForTarget(state *gitstore.State, target string) (*tufdata.Targets, string, error) {
+func getTargetsRoleForTarget(state *metadata.PolicyState, target string) (*tufdata.Targets, string, error) {
 	db, err := InitializeTopLevelDB(state)
 	if err != nil {
 		return &tufdata.Targets{}, "", err
@@ -264,7 +264,7 @@ func getTargetsRoleForTarget(state *gitstore.State, target string) (*tufdata.Tar
 	}
 }
 
-func getStateTree(metadataRepo *gitstore.State, target string) (*object.Tree, error) {
+func getStateTree(metadataRepo *metadata.PolicyState, target string) (*object.Tree, error) {
 	mainRepo, err := GetRepoHandler()
 	if err != nil {
 		return &object.Tree{}, err
@@ -284,7 +284,7 @@ func getStateTree(metadataRepo *gitstore.State, target string) (*object.Tree, er
 	return mainRepo.TreeObject(stateRefCommit.TreeHash)
 }
 
-func getDelegationForTarget(state *gitstore.State, target string) (tufdata.DelegatedRole, error) {
+func getDelegationForTarget(state *metadata.PolicyState, target string) (tufdata.DelegatedRole, error) {
 	db, err := InitializeTopLevelDB(state)
 	if err != nil {
 		return tufdata.DelegatedRole{}, err
@@ -341,7 +341,7 @@ func validateUsedKeyIDs(authorizedKeyIDs []string, usedKeyIDs []string) bool {
 	return true
 }
 
-func validateRule(ruleState *gitstore.State, path string, usedKeyIDs []string) error {
+func validateRule(ruleState *metadata.PolicyState, path string, usedKeyIDs []string) error {
 	ruleInA, err := getDelegationForTarget(ruleState, path)
 	if err != nil {
 		return err
@@ -358,7 +358,7 @@ func validateRule(ruleState *gitstore.State, path string, usedKeyIDs []string) e
 	return nil
 }
 
-func validateChanges(ruleState *gitstore.State, changes object.Changes, usedKeyIDs []string) error {
+func validateChanges(ruleState *metadata.PolicyState, changes object.Changes, usedKeyIDs []string) error {
 	for _, c := range changes {
 		// For each change to a file, we want to verify that the policy allows
 		// the keys that were used to sign changes for the file.

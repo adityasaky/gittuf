@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/adityasaky/gittuf/internal/gitstore"
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	"github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
 	"github.com/sirupsen/logrus"
 	tufdata "github.com/theupdateframework/go-tuf/data"
 )
 
-func Pull(store *gitstore.GitStore, remoteName string, refName string) error {
-	// TODO: If changes are invalid, what state should gitstore be in?
+func Pull(store *metadata.GitTUFMetadata, remoteName string, refName string) error {
+	// TODO: If changes are invalid, what state should Metadata be in?
 	currentState := store.State()
 	repository := store.Repository()
 
@@ -79,20 +79,20 @@ func Pull(store *gitstore.GitStore, remoteName string, refName string) error {
 	})
 }
 
-func getPathToState(store *gitstore.GitStore, aID, bID string) ([]*gitstore.State, error) {
+func getPathToState(store *metadata.GitTUFMetadata, aID, bID string) ([]*metadata.PolicyState, error) {
 	// TODO: We should cache this so we have a forward path from aID for future checks
-	intermediateStates := []*gitstore.State{}
+	intermediateStates := []*metadata.PolicyState{}
 
 	bState, err := store.SpecificState(bID)
 	if err != nil {
-		return []*gitstore.State{}, err
+		return []*metadata.PolicyState{}, err
 	}
 
 	iter := bState
 	for {
 		iterTip, err := bState.GetCommitObjectFromHash(iter.TipHash())
 		if err != nil {
-			return []*gitstore.State{}, err
+			return []*metadata.PolicyState{}, err
 
 		}
 
@@ -100,11 +100,11 @@ func getPathToState(store *gitstore.GitStore, aID, bID string) ([]*gitstore.Stat
 			break
 		}
 
-		intermediateStates = append([]*gitstore.State{iter}, intermediateStates...)
+		intermediateStates = append([]*metadata.PolicyState{iter}, intermediateStates...)
 
 		parentState, err := store.SpecificState(string(iterTip.ParentHashes[0].String()))
 		if err != nil {
-			return []*gitstore.State{}, err
+			return []*metadata.PolicyState{}, err
 		}
 		iter = parentState
 	}
@@ -152,7 +152,7 @@ func fetchRef(repository *git.Repository, remoteName string, refName string) err
 	return err
 }
 
-func validateSuccessiveStates(sourceState *gitstore.State, pathStates []*gitstore.State, targetName string) (tufdata.HexBytes, error) {
+func validateSuccessiveStates(sourceState *metadata.PolicyState, pathStates []*metadata.PolicyState, targetName string) (tufdata.HexBytes, error) {
 	currentState := sourceState
 	currentTargets, _, err := getTargetsRoleForTarget(sourceState, targetName)
 	if err != nil {

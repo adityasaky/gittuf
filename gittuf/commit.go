@@ -4,14 +4,14 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/adityasaky/gittuf/internal/gitstore"
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/sirupsen/logrus"
 	tufdata "github.com/theupdateframework/go-tuf/data"
 )
 
-func Commit(state *gitstore.State, role string, keys []tufdata.PrivateKey, expires time.Time, gitArgs ...string) (tufdata.Signed, string, error) {
+func Commit(state *metadata.PolicyState, role string, keys []tufdata.PrivateKey, expires time.Time, gitArgs ...string) (tufdata.Signed, string, error) {
 	// TODO: Should `commit` check for updated metadata on a remote?
 
 	// We can infer the branch the commit is being created in because that's
@@ -80,7 +80,7 @@ func Commit(state *gitstore.State, role string, keys []tufdata.PrivateKey, expir
 	return signedRoleMb, targetName, nil
 }
 
-func verifyStagedFilesCanBeModified(state *gitstore.State, keyIDs []string) error {
+func verifyStagedFilesCanBeModified(state *metadata.PolicyState, keyIDs []string) error {
 	mainRepo, err := GetRepoHandler()
 	if err != nil {
 		return err

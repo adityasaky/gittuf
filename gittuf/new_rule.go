@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/adityasaky/gittuf/internal/gitstore"
-
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	tufdata "github.com/theupdateframework/go-tuf/data"
 	tufkeys "github.com/theupdateframework/go-tuf/pkg/keys"
 	tufsign "github.com/theupdateframework/go-tuf/sign"
 )
 
 func NewRule(
-	state *gitstore.State,
+	state *metadata.PolicyState,
 	role string,
 	roleKeys []tufdata.PrivateKey,
 	ruleName string,

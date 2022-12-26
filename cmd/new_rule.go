@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/adityasaky/gittuf/gittuf"
-	"github.com/adityasaky/gittuf/internal/gitstore"
+	metadata "github.com/adityasaky/gittuf/internal/gittuf-metadata"
 	"github.com/spf13/cobra"
 	tufdata "github.com/theupdateframework/go-tuf/data"
 )
@@ -85,13 +85,13 @@ func init() {
 }
 
 func runNewRule(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}
 	state := store.State()
 
-	err = state.FetchFromRemote(gitstore.DefaultRemote)
+	err = state.FetchFromRemote(metadata.DefaultRemote)
 	if err != nil {
 		return err
 	}

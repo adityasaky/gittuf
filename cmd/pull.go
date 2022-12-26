@@ -17,7 +17,7 @@ func init() {
 }
 
 func runPull(cmd *cobra.Command, args []string) error {
-	store, err := getGitStore()
+	store, err := getGitTUFMetadataHandler()
 	if err != nil {
 		return err
 	}

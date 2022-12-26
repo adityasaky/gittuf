@@ -1,4 +1,4 @@
-package gitstore
+package metadata
 
 import (
 	"encoding/json"
@@ -14,24 +14,24 @@ import (
 )
 
 const (
-	StateRef      = "refs/gittuf/state"
-	DefaultRemote = "origin"
-	MetadataDir   = "metadata"
-	KeysDir       = "keys"
+	PolicyStateRef = "refs/gittuf/policy-state"
+	DefaultRemote  = "origin"
+	MetadataDir    = "metadata"
+	KeysDir        = "keys"
 )
 
-func LoadState(repoRoot string) (*State, error) {
+func LoadState(repoRoot string) (*PolicyState, error) {
 	repo, err := git.PlainOpen(repoRoot)
 	if err != nil {
-		return &State{}, err
+		return &PolicyState{}, err
 	}
-	ref, err := repo.Reference(plumbing.ReferenceName(StateRef), true)
+	ref, err := repo.Reference(plumbing.ReferenceName(PolicyStateRef), true)
 	if err != nil {
-		return &State{}, err
+		return &PolicyState{}, err
 	}
 
 	if ref.Hash() == plumbing.ZeroHash {
-		return &State{
+		return &PolicyState{
 			metadataStaging:     map[string][]byte{},
 			keysStaging:         map[string][]byte{},
 			repository:          repo,
@@ -46,21 +46,21 @@ func LoadState(repoRoot string) (*State, error) {
 	return loadState(repo, ref.Hash())
 }
 
-func LoadAtState(repoRoot string, stateID string) (*State, error) {
+func LoadAtState(repoRoot string, stateID string) (*PolicyState, error) {
 	repo, err := git.PlainOpen(repoRoot)
 	if err != nil {
-		return &State{}, nil
+		return &PolicyState{}, nil
 	}
-	ref, err := repo.Reference(plumbing.ReferenceName(StateRef), true)
+	ref, err := repo.Reference(plumbing.ReferenceName(PolicyStateRef), true)
 	if err != nil {
-		return &State{}, err
+		return &PolicyState{}, err
 	}
 
 	currentHash := ref.Hash()
 	stateHash := plumbing.NewHash(stateID)
 
 	if stateHash == plumbing.ZeroHash || currentHash == plumbing.ZeroHash {
-		return &State{}, fmt.Errorf("can't load gittuf repository at state zero")
+		return &PolicyState{}, fmt.Errorf("can't load gittuf repository at state zero")
 	}
 	if currentHash == stateHash {
 		return LoadState(repoRoot)
@@ -75,14 +75,14 @@ func LoadAtState(repoRoot string, stateID string) (*State, error) {
 
 		commitObj, err := repo.CommitObject(iteratorHash)
 		if err != nil {
-			return &State{}, err
+			return &PolicyState{}, err
 		}
 
 		if len(commitObj.ParentHashes) == 0 {
-			return &State{}, fmt.Errorf("state %s not found in gittuf namespace", stateID)
+			return &PolicyState{}, fmt.Errorf("state %s not found in gittuf namespace", stateID)
 		}
 		if len(commitObj.ParentHashes) > 1 {
-			return &State{}, fmt.Errorf("state %s has multiple parents", iteratorHash.String())
+			return &PolicyState{}, fmt.Errorf("state %s has multiple parents", iteratorHash.String())
 		}
 
 		iteratorHash = commitObj.ParentHashes[0]
@@ -92,7 +92,7 @@ func LoadAtState(repoRoot string, stateID string) (*State, error) {
 	return loadState(repo, stateHash)
 }
 
-type State struct {
+type PolicyState struct {
 	repository          *git.Repository
 	metadataStaging     map[string][]byte // rolename: contents, rolename should NOT include extension
 	keysStaging         map[string][]byte // keyID: PubKey
@@ -103,8 +103,8 @@ type State struct {
 	written             bool
 }
 
-func (s *State) FetchFromRemote(remoteName string) error {
-	refSpec := config.RefSpec(fmt.Sprintf("%s:%s", StateRef, StateRef))
+func (s *PolicyState) FetchFromRemote(remoteName string) error {
+	refSpec := config.RefSpec(fmt.Sprintf("%s:%s", PolicyStateRef, PolicyStateRef))
 	options := &git.FetchOptions{
 		RemoteName: remoteName,
 		RefSpecs:   []config.RefSpec{refSpec},
@@ -117,7 +117,7 @@ func (s *State) FetchFromRemote(remoteName string) error {
 		return err
 	}
 
-	ref, err := s.repository.Reference(plumbing.ReferenceName(StateRef), true)
+	ref, err := s.repository.Reference(plumbing.ReferenceName(PolicyStateRef), true)
 	if err != nil {
 		return err
 	}
@@ -152,39 +152,39 @@ func (s *State) FetchFromRemote(remoteName string) error {
 	return nil
 }
 
-func (s *State) Tip() string {
+func (s *PolicyState) Tip() string {
 	return s.tip.String()
 }
 
-func (s *State) TipHash() plumbing.Hash {
+func (s *PolicyState) TipHash() plumbing.Hash {
 	return s.tip
 }
 
-func (s *State) Tree() (*object.Tree, error) {
+func (s *PolicyState) Tree() (*object.Tree, error) {
 	return s.repository.TreeObject(s.tree)
 }
 
-func (s *State) Written() bool {
+func (s *PolicyState) Written() bool {
 	return s.written
 }
 
-func (s *State) GetCommitObject(id string) (*object.Commit, error) {
+func (s *PolicyState) GetCommitObject(id string) (*object.Commit, error) {
 	return s.GetCommitObjectFromHash(plumbing.NewHash(id))
 }
 
-func (s *State) GetCommitObjectFromHash(hash plumbing.Hash) (*object.Commit, error) {
+func (s *PolicyState) GetCommitObjectFromHash(hash plumbing.Hash) (*object.Commit, error) {
 	return s.repository.CommitObject(hash)
 }
 
-func (s *State) GetTreeObject(id string) (*object.Tree, error) {
+func (s *PolicyState) GetTreeObject(id string) (*object.Tree, error) {
 	return s.GetTreeObjectFromHash(plumbing.NewHash(id))
 }
 
-func (s *State) GetTreeObjectFromHash(hash plumbing.Hash) (*object.Tree, error) {
+func (s *PolicyState) GetTreeObjectFromHash(hash plumbing.Hash) (*object.Tree, error) {
 	return s.repository.TreeObject(hash)
 }
 
-func (s *State) GetTreeForNamespace(namespace string) (*object.Tree, error) {
+func (s *PolicyState) GetTreeForNamespace(namespace string) (*object.Tree, error) {
 	tree, err := s.repository.TreeObject(s.tree)
 	if err != nil {
 		return &object.Tree{}, err
@@ -197,7 +197,7 @@ func (s *State) GetTreeForNamespace(namespace string) (*object.Tree, error) {
 	return &object.Tree{}, fmt.Errorf("tree not found for namespace %s", namespace)
 }
 
-func (s *State) GetMetadataForState(stateID string) (map[string][]byte, error) {
+func (s *PolicyState) GetMetadataForState(stateID string) (map[string][]byte, error) {
 	metadata := map[string][]byte{}
 
 	commit, err := s.GetCommitObject(stateID)
@@ -220,12 +220,12 @@ func (s *State) GetMetadataForState(stateID string) (map[string][]byte, error) {
 	return metadata, nil
 }
 
-func (s *State) HasFile(roleName string) bool {
+func (s *PolicyState) HasFile(roleName string) bool {
 	_, exists := s.metadataIdentifiers[roleName]
 	return exists
 }
 
-func (s *State) GetCurrentMetadataBytes(roleName string) ([]byte, error) {
+func (s *PolicyState) GetCurrentMetadataBytes(roleName string) ([]byte, error) {
 	_, contents, err := readBlob(s.repository, s.metadataIdentifiers[roleName].Hash)
 	if err != nil {
 		return []byte{}, err
@@ -233,7 +233,7 @@ func (s *State) GetCurrentMetadataBytes(roleName string) ([]byte, error) {
 	return contents, nil
 }
 
-func (s *State) GetUnverifiedSignersForRole(roleName string) ([]string, error) {
+func (s *PolicyState) GetUnverifiedSignersForRole(roleName string) ([]string, error) {
 	contents, err := s.GetCurrentMetadataBytes(roleName)
 	if err != nil {
 		return []string{}, err
@@ -253,12 +253,12 @@ func (s *State) GetUnverifiedSignersForRole(roleName string) ([]string, error) {
 	return keyIDs, nil
 }
 
-func (s *State) GetCurrentMetadataString(roleName string) (string, error) {
+func (s *PolicyState) GetCurrentMetadataString(roleName string) (string, error) {
 	contents, err := s.GetCurrentMetadataBytes(roleName)
 	return string(contents), err
 }
 
-func (s *State) GetAllCurrentMetadata() (map[string][]byte, error) {
+func (s *PolicyState) GetAllCurrentMetadata() (map[string][]byte, error) {
 	metadata := map[string][]byte{}
 	for roleName, treeEntry := range s.metadataIdentifiers {
 		_, contents, err := readBlob(s.repository, treeEntry.Hash)
@@ -270,7 +270,7 @@ func (s *State) GetAllCurrentMetadata() (map[string][]byte, error) {
 	return metadata, nil
 }
 
-func (s *State) GetRootKey(keyID string) (tufdata.PublicKey, error) {
+func (s *PolicyState) GetRootKey(keyID string) (tufdata.PublicKey, error) {
 	var key tufdata.PublicKey
 	contents, err := s.GetRootKeyBytes(keyID)
 	if err != nil {
@@ -280,17 +280,17 @@ func (s *State) GetRootKey(keyID string) (tufdata.PublicKey, error) {
 	return key, err
 }
 
-func (s *State) GetRootKeyBytes(keyID string) ([]byte, error) {
+func (s *PolicyState) GetRootKeyBytes(keyID string) ([]byte, error) {
 	_, contents, err := readBlob(s.repository, s.rootKeys[keyID].Hash)
 	return contents, err
 }
 
-func (s *State) GetRootKeyString(keyID string) (string, error) {
+func (s *PolicyState) GetRootKeyString(keyID string) (string, error) {
 	contents, err := s.GetRootKeyBytes(keyID)
 	return string(contents), err
 }
 
-func (s *State) GetAllRootKeys() (map[string]tufdata.PublicKey, error) {
+func (s *PolicyState) GetAllRootKeys() (map[string]tufdata.PublicKey, error) {
 	keys := map[string]tufdata.PublicKey{}
 	for keyID, treeEntry := range s.rootKeys {
 		_, contents, err := readBlob(s.repository, treeEntry.Hash)
@@ -309,28 +309,28 @@ func (s *State) GetAllRootKeys() (map[string]tufdata.PublicKey, error) {
 	return keys, nil
 }
 
-func (s *State) StageMetadata(roleName string, contents []byte) {
+func (s *PolicyState) StageMetadata(roleName string, contents []byte) {
 	s.metadataStaging[roleName] = contents
 	s.written = false
 }
 
-func (s *State) StageMetadataAndCommit(roleName string, contents []byte) error {
+func (s *PolicyState) StageMetadataAndCommit(roleName string, contents []byte) error {
 	s.StageMetadata(roleName, contents)
 	return s.Commit()
 }
 
-func (s *State) StageMultipleMetadata(metadata map[string][]byte) {
+func (s *PolicyState) StageMultipleMetadata(metadata map[string][]byte) {
 	for roleName, contents := range metadata {
 		s.StageMetadata(roleName, contents)
 	}
 }
 
-func (s *State) StageAndCommitMultipleMetadata(metadata map[string][]byte) error {
+func (s *PolicyState) StageAndCommitMultipleMetadata(metadata map[string][]byte) error {
 	s.StageMultipleMetadata(metadata)
 	return s.Commit()
 }
 
-func (s *State) StageKey(key tufdata.PublicKey) error {
+func (s *PolicyState) StageKey(key tufdata.PublicKey) error {
 	s.written = false
 	contents, err := json.Marshal(key)
 	if err != nil {
@@ -343,7 +343,7 @@ func (s *State) StageKey(key tufdata.PublicKey) error {
 	return nil
 }
 
-func (s *State) StageKeyAndCommit(key tufdata.PublicKey) error {
+func (s *PolicyState) StageKeyAndCommit(key tufdata.PublicKey) error {
 	err := s.StageKey(key)
 	if err != nil {
 		return err
@@ -351,7 +351,7 @@ func (s *State) StageKeyAndCommit(key tufdata.PublicKey) error {
 	return s.Commit()
 }
 
-func (s *State) StageKeys(keys []tufdata.PublicKey) error {
+func (s *PolicyState) StageKeys(keys []tufdata.PublicKey) error {
 	for _, key := range keys {
 		err := s.StageKey(key)
 		if err != nil {
@@ -361,7 +361,7 @@ func (s *State) StageKeys(keys []tufdata.PublicKey) error {
 	return nil
 }
 
-func (s *State) StageKeysAndCommit(keys []tufdata.PublicKey) error {
+func (s *PolicyState) StageKeysAndCommit(keys []tufdata.PublicKey) error {
 	err := s.StageKeys(keys)
 	if err != nil {
 		return err
@@ -369,7 +369,7 @@ func (s *State) StageKeysAndCommit(keys []tufdata.PublicKey) error {
 	return s.Commit()
 }
 
-func (s *State) Commit() error {
+func (s *PolicyState) Commit() error {
 	if s.Written() {
 		// Nothing to do
 		return nil
@@ -454,7 +454,7 @@ func (s *State) Commit() error {
 	s.tree = treeHash
 
 	// Commit to ref
-	commitHash, err := commit(s.repository, s.tip, treeHash, StateRef)
+	commitHash, err := commit(s.repository, s.tip, treeHash, PolicyStateRef)
 	if err != nil {
 		return err
 	}
@@ -465,7 +465,7 @@ func (s *State) Commit() error {
 	return nil
 }
 
-func (s *State) RemoveMetadata(roleNames []string) error {
+func (s *PolicyState) RemoveMetadata(roleNames []string) error {
 	s.written = false
 
 	for _, role := range roleNames {
@@ -476,7 +476,7 @@ func (s *State) RemoveMetadata(roleNames []string) error {
 	return s.Commit()
 }
 
-func (s *State) RemoveKeys(keyIDs []string) error {
+func (s *PolicyState) RemoveKeys(keyIDs []string) error {
 	s.written = false
 
 	for _, keyID := range keyIDs {
